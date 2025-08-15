@@ -1,0 +1,16 @@
+{
+  "name": "schedule-creator",
+  "version": "1.0.0",
+  "description": "4조 3교대 근무 일정표 생성기",
+  "main": "src/scheduler.js",
+  "scripts": {
+    "start": "node src/scheduler.js",
+    "web": "node server.js",
+    "test": "node test/test.js",
+    "dev": "node --watch src/scheduler.js"
+  },
+  "keywords": ["schedule", "shift", "work", "rotation"],
+  "author": "",
+  "license": "MIT",
+  "type": "module"
+}

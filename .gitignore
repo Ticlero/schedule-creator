@@ -137,3 +137,24 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Project specific ignores
+# CSV export files (사용자가 생성한 스케줄 CSV 파일들)
+shift_schedule_*.csv
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Test files
+test.html
+
+# Claude Code files
+ claude

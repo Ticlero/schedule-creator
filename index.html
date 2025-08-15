@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4조 3교대 근무 일정표</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>4조 3교대 근무 일정표</h1>
+            <p class="subtitle">10일 주기 순환 시스템</p>
+        </header>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="start-date">시작 날짜:</label>
+                <input type="date" id="start-date">
+            </div>
+            <div class="control-group">
+                <label for="days-count">표시 일수:</label>
+                <input type="number" id="days-count" min="1" max="60" value="30">
+            </div>
+            <button id="generate-btn">일정표 생성</button>
+            <button id="export-btn">CSV 내보내기</button>
+        </div>
+
+        <div class="shift-legend">
+            <h3>교대 시간</h3>
+            <div class="legend-items">
+                <div class="legend-item day">
+                    <span class="legend-color"></span>
+                    <span>Day: 07:00-15:00 (8시간)</span>
+                </div>
+                <div class="legend-item night">
+                    <span class="legend-color"></span>
+                    <span>Night: 22:00-07:00 (9시간)</span>
+                </div>
+                <div class="legend-item evening">
+                    <span class="legend-color"></span>
+                    <span>Evening: 15:00-22:00 (7시간)</span>
+                </div>
+                <div class="legend-item rest">
+                    <span class="legend-color"></span>
+                    <span>Rest: 휴무</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="schedule-container">
+            <table id="schedule-table">
+                <thead>
+                    <tr>
+                        <th>날짜</th>
+                        <th>요일</th>
+                        <th>1조</th>
+                        <th>2조</th>
+                        <th>3조</th>
+                        <th>4조</th>
+                    </tr>
+                </thead>
+                <tbody id="schedule-body">
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pattern-info">
+            <h3>패턴 설명</h3>
+            <ul>
+                <li>매일 정확히 3개 조가 근무 (Day, Night, Evening), 1개 조 휴무</li>
+                <li>각 조: 3일 Day → 1일 Rest → 3일 Night → 1일 Rest → 3일 Evening → 1일 Rest (12일 주기)</li>
+                <li>휴무일이 하루씩 차이로 공정한 순환</li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module">
+        // 디버깅을 위한 콘솔 로그
+        console.log('Loading modules...');
+        
+        try {
+            const { ShiftScheduler } = await import('./src/scheduler.js');
+            console.log('ShiftScheduler imported successfully');
+            
+            class WebScheduler extends ShiftScheduler {
+                constructor() {
+                    super();
+                    this.currentSchedule = null;
+                    this.initializeEventListeners();
+                    this.setDefaultDate();
+                    this.generateDefaultSchedule();
+                }
+                
+                initializeEventListeners() {
+                    const generateBtn = document.getElementById('generate-btn');
+                    const exportBtn = document.getElementById('export-btn');
+                    
+                    if (!generateBtn || !exportBtn) {
+                        console.error('Buttons not found!');
+                        return;
+                    }
+                    
+                    generateBtn.addEventListener('click', (e) => {
+                        console.log('Generate button clicked');
+                        this.handleGenerateSchedule();
+                    });
+                    exportBtn.addEventListener('click', (e) => {
+                        console.log('Export button clicked');
+                        this.handleExportCSV();
+                    });
+                    
+                    console.log('Event listeners added successfully');
+                }
+                
+                setDefaultDate() {
+                    const today = new Date();
+                    const dateInput = document.getElementById('start-date');
+                    if (dateInput) {
+                        dateInput.value = today.toISOString().split('T')[0];
+                    }
+                }
+                
+                generateDefaultSchedule() {
+                    const today = new Date();
+                    this.currentSchedule = this.generateSchedule(today, 30);
+                    this.renderScheduleTable(this.currentSchedule);
+                    console.log('Default schedule generated');
+                }
+                
+                handleGenerateSchedule() {
+                    console.log('handleGenerateSchedule called');
+                    const startDateInput = document.getElementById('start-date');
+                    const daysCountInput = document.getElementById('days-count');
+                    
+                    const startDate = new Date(startDateInput.value);
+                    const daysCount = parseInt(daysCountInput.value) || 30;
+                    
+                    if (isNaN(startDate.getTime())) {
+                        alert('올바른 시작 날짜를 선택해주세요.');
+                        return;
+                    }
+                    
+                    if (daysCount < 1 || daysCount > 60) {
+                        alert('표시 일수는 1-60일 사이여야 합니다.');
+                        return;
+                    }
+                    
+                    this.showLoading();
+                    
+                    setTimeout(() => {
+                        this.currentSchedule = this.generateSchedule(startDate, daysCount);
+                        this.renderScheduleTable(this.currentSchedule);
+                        console.log('New schedule generated');
+                    }, 100);
+                }
+                
+                handleExportCSV() {
+                    console.log('handleExportCSV called');
+                    if (!this.currentSchedule) {
+                        alert('먼저 일정표를 생성해주세요.');
+                        return;
+                    }
+                    
+                    const csvContent = this.exportToCSV(this.currentSchedule);
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    
+                    const today = new Date();
+                    const filename = `shift_schedule_${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}.csv`;
+                    
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.style.display = 'none';
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    alert(`CSV 파일이 다운로드되었습니다: ${filename}`);
+                }
+                
+                showLoading() {
+                    const tableBody = document.getElementById('schedule-body');
+                    if (tableBody) {
+                        tableBody.innerHTML = '<tr><td colspan="6" class="loading">일정표를 생성하는 중...</td></tr>';
+                    }
+                }
+                
+                renderScheduleTable(schedule) {
+                    const tableBody = document.getElementById('schedule-body');
+                    if (!tableBody) {
+                        console.error('Table body not found');
+                        return;
+                    }
+                    
+                    tableBody.innerHTML = '';
+                    
+                    // 각 날짜별 행 생성
+                    schedule.forEach(day => {
+                        const row = document.createElement('tr');
+                        
+                        // 날짜 셀
+                        const dateCell = document.createElement('td');
+                        const date = new Date(day.date);
+                        dateCell.textContent = `${date.getMonth() + 1}/${date.getDate()}`;
+                        dateCell.style.fontWeight = 'bold';
+                        dateCell.style.backgroundColor = '#f8f9fa';
+                        row.appendChild(dateCell);
+                        
+                        // 요일 셀
+                        const dayCell = document.createElement('td');
+                        dayCell.textContent = day.dayOfWeek;
+                        dayCell.style.backgroundColor = '#f8f9fa';
+                        
+                        // 주말 표시
+                        if (day.dayOfWeek === '토' || day.dayOfWeek === '일') {
+                            dayCell.style.color = '#e74c3c';
+                            dayCell.style.fontWeight = 'bold';
+                        }
+                        row.appendChild(dayCell);
+                        
+                        // 각 조별 셀 생성
+                        this.teams.forEach(team => {
+                            const teamCell = document.createElement('td');
+                            const teamData = day.teams[team];
+                            const shift = teamData.shift;
+                            
+                            if (shift === 'Rest') {
+                                teamCell.innerHTML = '<span class="shift-rest">휴무</span>';
+                            } else {
+                                const shiftClass = `shift-${shift.toLowerCase()}`;
+                                teamCell.innerHTML = `<span class="${shiftClass}">${shift}</span>`;
+                            }
+                            
+                            teamCell.style.textAlign = 'center';
+                            row.appendChild(teamCell);
+                        });
+                        
+                        tableBody.appendChild(row);
+                    });
+                }
+            }
+            
+            // DOM이 로드되면 웹 스케줄러 초기화
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('DOM loaded, initializing WebScheduler');
+                new WebScheduler();
+            });
+            
+            // 페이지가 이미 로드된 경우를 위해
+            if (document.readyState === 'loading') {
+                console.log('Document is still loading');
+            } else {
+                console.log('Document already loaded, initializing WebScheduler immediately');
+                new WebScheduler();
+            }
+            
+        } catch (error) {
+            console.error('Error loading modules:', error);
+            alert('JavaScript 로딩 오류: ' + error.message);
+        }
+    </script>
+</body>
+</html>
