@@ -9,7 +9,12 @@
     "test": "node test/test.js",
     "dev": "node --watch src/scheduler.js"
   },
-  "keywords": ["schedule", "shift", "work", "rotation"],
+  "keywords": [
+    "schedule",
+    "shift",
+    "work",
+    "rotation"
+  ],
   "author": "",
   "license": "MIT",
   "type": "module"
